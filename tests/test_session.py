@@ -1,7 +1,7 @@
 import unittest
 
 from search_cnki import Query, Session
-from search_cnki.data import Article
+from search_cnki.search_response import SearchArticle
 
 def add(a, b):
   return a + b
@@ -18,7 +18,7 @@ class TestSession(unittest.TestCase):
      query = Query().subject(title).author(author)
      response = self.session.search(query)
      self.assertEqual(response.count, 1)
-     first_article: Article = None
+     first_article: SearchArticle = None
 
      for article in response:
        first_article = article
