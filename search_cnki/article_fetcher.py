@@ -105,3 +105,21 @@ class ArticleFetcher:
       pdf_href=pdf_href,
       html_href=html_href,
     )
+
+  def download_pdf(self, pdf_href: str, from_url: str, pdf_file_path: str):
+    self._limiter.limit()
+    headers_content = {
+      **headers(),
+      "Referer": from_url,
+    }
+    with self._session.get(pdf_href, stream=True, headers=headers_content) as response:
+      content_type = response.headers.get("Content-Type")
+      chunk_size = 8192
+
+      if "text/html" in content_type:
+        raise Exception("Need to verify")
+
+      with open(pdf_file_path, "wb") as file:
+        for chunk in response.iter_content(chunk_size=chunk_size):
+          if chunk:
+            file.write(chunk)

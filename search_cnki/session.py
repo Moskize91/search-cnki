@@ -19,3 +19,6 @@ class Session:
 
   def article(self, href: str) -> Article:
     return self._article_fetcher.article(href)
+
+  def download_pdf(self, href: str, from_url: str, file_path: str):
+    self._article_fetcher.download_pdf(href, from_url, file_path)
