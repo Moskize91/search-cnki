@@ -1,4 +1,10 @@
 {
   "python.terminal.activateEnvInCurrentTerminal": true,
   "python.envFile": "${workspaceFolder}/.env",
+  "cSpell.words": [
+    "cnki",
+    "getchildren",
+    "lxml",
+    "Referer"
+  ],
 }
