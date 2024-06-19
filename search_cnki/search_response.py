@@ -1,46 +1,10 @@
 import requests
 
-from lxml import html, etree
+from lxml import html
+from .common import headers, check_is_verify_page, first_ele, dom_text
+from .link import ArticleLink, AuthorLink, SourceLink
 from .query_builder import Query
 from .interval_limiter import IntervalLimiter
-
-class SearchAuthor:
-  def __init__(
-    self,
-    name: str,
-    href: str,
-  ):
-    self.name: str = name
-    self.href: str = href
-
-  def __str__(self) -> str:
-    return f"<Author {self.name}>"
-
-class SearchSource:
-  def __init__(self, name: str, href: str) -> None:
-    self.name: str = name
-    self.href: str = href
-
-  def __str__(self) -> str:
-    return f"<Source {self.name}>"
-
-class SearchArticle:
-  def __init__(
-    self,
-    title: str,
-    href: str,
-    published_at: str,
-    authors: list[SearchAuthor],
-    source: SearchSource,
-  ):
-    self.title: str = title
-    self.href: str = href
-    self.published_at: str = published_at
-    self.authors: list[SearchAuthor] = authors
-    self.source: SearchSource = source
-
-  def __str__(self) -> str:
-    return f"<Article {self.title}>"
 
 class SearchResponse:
   def __init__(self, query: Query, limiter: IntervalLimiter, session: requests.Session):
@@ -49,6 +13,10 @@ class SearchResponse:
     self._session: requests.Session = session
     self._current_page: int = 0
     root = self._request(self._current_page)
+
+    if check_is_verify_page(root):
+      raise Exception("Need to verify")
+
     self.count = self._get_items_count(root)
 
     if self.count > 0:
@@ -59,7 +27,7 @@ class SearchResponse:
   def __iter__(self):
       return SearchResponseIterable(self)
 
-  def _fetch_article(self, index: int) -> SearchArticle:
+  def _fetch_article(self, index: int) -> ArticleLink:
     while index >= len(self._articles):
       self._current_page += 1
       root = self._request(self._current_page)
@@ -70,7 +38,6 @@ class SearchResponse:
 
   def _request(self, cur_page: int):
     self._limiter.limit()
-    self._session.get("https://kns.cnki.net/")
     search_url = "https://kns.cnki.net/kns8s/brief/grid"
     post_data = {
       "boolSearch": True,
@@ -86,10 +53,11 @@ class SearchResponse:
       "searchFrom": "资源范围：总库",
       "CurPage": cur_page + 1,
     }
-    post_resp = self._session.post(search_url, data=post_data, headers={
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0",
-      "Referer": "https://kns.cnki.net/kns8s/defaultresult",
-    })
+    post_resp = self._session.post(
+      search_url,
+      data=post_data,
+      headers=headers(),
+    )
     return html.fromstring(post_resp.text)
 
   def _get_items_count(self, root) -> int:
@@ -100,8 +68,8 @@ class SearchResponse:
     else:
       return 0
 
-  def _get_articles(self, root) -> list[SearchArticle]:
-    articles: list[SearchArticle] = []
+  def _get_articles(self, root) -> list[ArticleLink]:
+    articles: list[ArticleLink] = []
     table_body = first_ele(root.xpath('//div[@id="gridTable"]//table[@class="result-table-list"]//tbody'))
 
     if table_body is None:
@@ -116,27 +84,27 @@ class SearchResponse:
       href: str = ""
 
       if title_dom is not None:
-        title = etree.tostring(title_dom, method="text", encoding="unicode").strip()
+        title = dom_text(title_dom)
         href = title_dom.get("href")
 
       author_dom = first_ele(tr_dom.xpath('td[@class="author"]'))
-      authors: list[SearchAuthor] = []
+      authors: list[AuthorLink] = []
 
       if author_dom is not None:
         for a_dom in author_dom.getchildren():
           if a_dom.tag != "a":
             continue
-          authors.append(SearchAuthor(
-            name=etree.tostring(a_dom, method="text", encoding="unicode").strip(),
+          authors.append(AuthorLink(
+            name=dom_text(a_dom),
             href=a_dom.get("href"),
           ))
 
       source_dom = first_ele(tr_dom.xpath('td[@class="source"]/a'))
-      source: SearchSource = None
+      source: SourceLink = None
 
       if source_dom is not None:
-        source = SearchSource(
-          name=etree.tostring(source_dom, method="text", encoding="unicode").strip(),
+        source = SourceLink(
+          name=dom_text(source_dom),
           href=source_dom.get("href"),
         )
 
@@ -144,9 +112,9 @@ class SearchResponse:
       published_at: str = ""
 
       if published_at_dom is not None:
-        published_at = etree.tostring(published_at_dom, method="text", encoding="unicode").strip()
+        published_at = dom_text(published_at_dom)
 
-      articles.append(SearchArticle(
+      articles.append(ArticleLink(
         title=title,
         href=href,
         published_at=published_at,
@@ -170,8 +138,3 @@ class SearchResponseIterable:
       article = self._parent._fetch_article(self._index)
       self._index += 1
       return article
-
-def first_ele(elements: list):
-  for element in elements:
-    return element
-  return None
