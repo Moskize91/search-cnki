@@ -6,6 +6,7 @@ from urllib.parse import urljoin
 from .link import AuthorLink
 from .common import headers, check_is_verify_page, first_ele, dom_text
 from .interval_limiter import IntervalLimiter
+from .exception import TimeoutVerifyException, AuthVerifyException
 
 class Article:
   def __init__(
@@ -36,7 +37,7 @@ class ArticleFetcher:
     resp = self._session.get(href, headers=headers())
     root = html.fromstring(resp.text)
     if check_is_verify_page(root):
-      raise Exception("Need to verify")
+      raise TimeoutVerifyException("read article timeout")
 
     meta_info_prefix = '//div[@class="brief"]//div[@class="wx-tit"]'
     title_dom = first_ele(root.xpath(f'{meta_info_prefix}//h1'))
@@ -117,7 +118,7 @@ class ArticleFetcher:
       chunk_size = 8192
 
       if "text/html" in content_type:
-        raise Exception("Need to verify")
+        raise AuthVerifyException("download PDF auth verify failed")
 
       with open(pdf_file_path, "wb") as file:
         for chunk in response.iter_content(chunk_size=chunk_size):

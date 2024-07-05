@@ -14,8 +14,8 @@ class TestSession(unittest.TestCase):
     self.session = Session()
 
   def test_search_one_article(self):
-     title = "三孩政策背景下我国生育政策转型研究"
-     author = "王涛"
+     title = "“三孩”政策背景下我国乡村生育政策的创新与完善研究"
+     author = "周晓焱"
      query = Query().subject(title).author(author)
      response = self.session.search(query)
      self.assertEqual(response.count, 1)
@@ -48,7 +48,10 @@ class TestSession(unittest.TestCase):
     # self.session.download_pdf(
     #   article.pdf_href,
     #   article_url,
-    #   os.path.relpath("../dist/test.pdf", os.path.dirname(os.path.abspath(__file__))),
+    #   os.path.normpath(os.path.join(
+    #     os.path.dirname(os.path.abspath(__file__)),
+    #     "../dist/test.pdf",
+    #   )),
     # )
 
 

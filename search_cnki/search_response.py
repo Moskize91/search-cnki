@@ -5,6 +5,7 @@ from .common import headers, check_is_verify_page, first_ele, dom_text
 from .link import ArticleLink, AuthorLink, SourceLink
 from .query_builder import Query
 from .interval_limiter import IntervalLimiter
+from .exception import TimeoutVerifyException
 
 class SearchResponse:
   def __init__(self, query: Query, limiter: IntervalLimiter, session: requests.Session):
@@ -15,7 +16,7 @@ class SearchResponse:
     root = self._request(self._current_page)
 
     if check_is_verify_page(root):
-      raise Exception("Need to verify")
+      raise TimeoutVerifyException("search timeout")
 
     self.count = self._get_items_count(root)
 
