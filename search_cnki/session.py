@@ -17,6 +17,8 @@ class Session:
   def search(self, query: Query) -> SearchResponse:
     return SearchResponse(query, self._limiter, self._session)
 
+  # href 本身可能过期，此时会抛出 TimeoutVerifyException
+  # 在重新验证之后，请刷新以获取新的 href 重新调用
   def article(self, href: str) -> Article:
     return self._article_fetcher.article(href)
 
