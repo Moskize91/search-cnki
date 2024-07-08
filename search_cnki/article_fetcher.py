@@ -1,4 +1,5 @@
 import requests
+import threading
 
 from lxml import html
 from urllib.parse import urljoin
@@ -27,14 +28,18 @@ class Article:
     self.pdf_href: str = pdf_href
     self.html_href: str = html_href
 
+# thread safe object
 class ArticleFetcher:
-  def __init__(self, limiter: IntervalLimiter, session: requests.Session):
+  def __init__(self, limiter: IntervalLimiter, lock: threading.Lock, session: requests.Session):
     self._limiter: IntervalLimiter = limiter
+    self._lock: threading.Lock = lock
     self._session: requests.Session = session
 
   def article(self, href: str) -> Article:
     self._limiter.limit()
-    resp = self._session.get(href, headers=headers())
+    with self._lock:
+      resp = self._session.get(href, headers=headers())
+
     root = html.fromstring(resp.text)
     if check_is_verify_page(root):
       raise TimeoutVerifyException("read article timeout")
@@ -113,14 +118,16 @@ class ArticleFetcher:
       **headers(),
       "Referer": from_url,
     }
-    with self._session.get(pdf_href, stream=True, headers=headers_content) as response:
-      content_type = response.headers.get("Content-Type")
-      chunk_size = 8192
+    with self._lock:
+      response = self._session.get(pdf_href, stream=True, headers=headers_content)
 
-      if "text/html" in content_type:
-        raise AuthVerifyException("download PDF auth verify failed")
+    content_type = response.headers.get("Content-Type")
+    chunk_size = 8192
 
-      with open(pdf_file_path, "wb") as file:
-        for chunk in response.iter_content(chunk_size=chunk_size):
-          if chunk:
-            file.write(chunk)
+    if "text/html" in content_type:
+      raise AuthVerifyException("download PDF auth verify failed")
+
+    with open(pdf_file_path, "wb") as file:
+      for chunk in response.iter_content(chunk_size=chunk_size):
+        if chunk:
+          file.write(chunk)

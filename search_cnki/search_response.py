@@ -1,4 +1,5 @@
 import requests
+import threading
 
 from lxml import html
 from .common import headers, check_is_verify_page, first_ele, dom_text
@@ -8,9 +9,10 @@ from .interval_limiter import IntervalLimiter
 from .exception import TimeoutVerifyException
 
 class SearchResponse:
-  def __init__(self, query: Query, limiter: IntervalLimiter, session: requests.Session):
-    self._limiter: IntervalLimiter = limiter
+  def __init__(self, query: Query, lock: threading.Lock, limiter: IntervalLimiter, session: requests.Session):
     self._query_json: dict = query.json()
+    self._lock: threading.Lock = lock
+    self._limiter: IntervalLimiter = limiter
     self._session: requests.Session = session
     self._current_page: int = 0
     root = self._request(self._current_page)
@@ -54,11 +56,13 @@ class SearchResponse:
       "searchFrom": "资源范围：总库",
       "CurPage": cur_page + 1,
     }
-    post_resp = self._session.post(
-      search_url,
-      data=post_data,
-      headers=headers(),
-    )
+    with self._lock:
+      post_resp = self._session.post(
+        search_url,
+        data=post_data,
+        headers=headers(),
+      )
+
     return html.fromstring(post_resp.text)
 
   def _get_items_count(self, root) -> int:
