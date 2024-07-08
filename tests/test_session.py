@@ -14,19 +14,19 @@ class TestSession(unittest.TestCase):
     self.session = Session()
 
   def test_search_one_article(self):
-     title = "“三孩”政策背景下我国乡村生育政策的创新与完善研究"
-     author = "周晓焱"
-     query = Query().subject(title).author(author)
-     response = self.session.search(query)
-     self.assertEqual(response.count, 1)
-     first_article: ArticleLink = None
+    title = "“三孩”政策背景下我国乡村生育政策的创新与完善研究"
+    author = "周晓焱"
+    query = Query().subject(title).author(author)
+    response = self.session.search(query)
+    self.assertEqual(response.count, 1)
+    first_article: ArticleLink = None
 
-     for article in response:
-       first_article = article
-       break
+    for article in response:
+      first_article = article
+      break
 
-     self.assertEqual(first_article.title, title)
-     self.assertEqual([a.name for a in first_article.authors], [author])
+    self.assertEqual(first_article.title, title)
+    self.assertEqual([a.name for a in first_article.authors], [author])
 
   def test_search_many_articles(self):
     query = Query().subject("中国特色社会主义")
