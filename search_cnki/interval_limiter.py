@@ -1,14 +1,20 @@
 import time
+import threading
 
+# thread safe object
 class IntervalLimiter:
   def __init__(self, interval: float):
-    self.interval = interval
-    self.last_time = 0.0
+    self._interval = interval
+    self._lock: threading.Lock = threading.Lock()
+    self._last_time = 0.0
 
   def limit(self):
-    current_time = time.time()
-    if current_time < self.last_time + self.interval:
-      time.sleep(self.interval - (current_time - self.last_time))
-      self.last_time = time.time()
-    else:
-      self.last_time = current_time
+    with self._lock:
+      current_time = time.time()
+      sleep_duration: int = self._interval - (current_time - self._last_time)
+
+    if sleep_duration > 0:
+      time.sleep(sleep_duration)
+
+    with self._lock:
+      self._last_time = time.time()
