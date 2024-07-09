@@ -5,7 +5,7 @@ from lxml import html
 from urllib.parse import urljoin
 
 from .link import AuthorLink
-from .common import headers, check_is_verify_page, first_ele, dom_text
+from .common import Referer, check_is_verify_page, first_ele, dom_text
 from .interval_limiter import IntervalLimiter
 from .exception import TimeoutVerifyException, AuthVerifyException
 
@@ -30,16 +30,26 @@ class Article:
 
 # thread safe object
 class ArticleFetcher:
-  def __init__(self, limiter: IntervalLimiter, lock: threading.Lock, session: requests.Session):
+  def __init__(
+    self,
+    limiter: IntervalLimiter,
+    lock: threading.Lock,
+    session: requests.Session,
+    user_agent: str,
+  ):
     self._limiter: IntervalLimiter = limiter
     self._lock: threading.Lock = lock
     self._session: requests.Session = session
+    self.user_agent: str = user_agent
 
   def article(self, href: str) -> Article:
     self._limiter.limit()
-    with self._lock:
-      resp = self._session.get(href, headers=headers())
 
+    with self._lock:
+      resp = self._session.get(href, headers={
+        "User-Agent": self.user_agent,
+        "Referer": Referer,
+      })
     root = html.fromstring(resp.text)
     if check_is_verify_page(root):
       raise TimeoutVerifyException("read article timeout")
@@ -115,7 +125,7 @@ class ArticleFetcher:
   def download_pdf(self, pdf_href: str, from_url: str, pdf_file_path: str):
     self._limiter.limit()
     headers_content = {
-      **headers(),
+      "User-Agent": self.user_agent,
       "Referer": from_url,
     }
     with self._lock:

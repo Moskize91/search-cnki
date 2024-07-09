@@ -1,10 +1,6 @@
 from lxml import etree
 
-def headers() -> dict:
-  return {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0",
-    "Referer": "https://kns.cnki.net/kns8s/defaultresult",
-  }
+Referer = "https://kns.cnki.net/kns8s/defaultresult"
 
 def first_ele(elements: list):
   for element in elements:

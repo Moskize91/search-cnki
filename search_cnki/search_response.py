@@ -1,19 +1,29 @@
 import requests
 import threading
 
+from typing import Iterator
 from lxml import html
-from .common import headers, check_is_verify_page, first_ele, dom_text
+
+from .common import Referer, check_is_verify_page, first_ele, dom_text
 from .link import ArticleLink, AuthorLink, SourceLink
 from .query_builder import Query
 from .interval_limiter import IntervalLimiter
 from .exception import TimeoutVerifyException
 
 class SearchResponse:
-  def __init__(self, query: Query, lock: threading.Lock, limiter: IntervalLimiter, session: requests.Session):
+  def __init__(
+      self,
+      query: Query,
+      lock: threading.Lock,
+      limiter: IntervalLimiter,
+      session: requests.Session,
+      user_agent: str,
+    ):
     self._query_json: dict = query.json()
     self._lock: threading.Lock = lock
     self._limiter: IntervalLimiter = limiter
     self._session: requests.Session = session
+    self._user_agent: str = user_agent
     self._current_page: int = 0
     root = self._request(self._current_page)
 
@@ -60,9 +70,11 @@ class SearchResponse:
       post_resp = self._session.post(
         search_url,
         data=post_data,
-        headers=headers(),
+        headers={
+          "User-Agent": self._user_agent,
+          "Referer": Referer,
+        },
       )
-
     return html.fromstring(post_resp.text)
 
   def _get_items_count(self, root) -> int:
@@ -134,10 +146,10 @@ class SearchResponseIterable:
     self._parent = parent
     self._index = -1
 
-  def __iter__(self):
+  def __iter__(self) -> Iterator[ArticleLink]:
       return self
 
-  def __next__(self):
+  def __next__(self) -> ArticleLink:
       if self._index >= self._parent.count:
           raise StopIteration
       article = self._parent._fetch_article(self._index)
